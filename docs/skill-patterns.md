@@ -84,13 +84,19 @@ The progress update should reflect completed verified milestones, not elapsed ti
 
 Every skill needs a stop rule. Without a stop rule, the skill drifts.
 
-## Why these public copies are shorter
+## Why these public copies differ
 
 My private skills include project paths, environment names, and tool wrappers.
 
-The public copies in this repo deliberately keep only the reusable parts:
+The public skills are not simplified samples. They keep the operational parts
+that make the real workflows useful:
 
 - workflow shape
-- guardrails
-- proof rules
-- stop rules
+- inputs and routing
+- authority and safety boundaries
+- evidence and failure handling
+- state, retry, and freshness rules where needed
+- cleanup and stop conditions
+
+Only the private adapter is removed: real repositories, ticket prefixes,
+accounts, credentials, hosts, ports, and organization-specific commands.

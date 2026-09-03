@@ -32,6 +32,27 @@ and where does that access come from?
    - `partial`
    - `unavailable`
 
+`available` means the required read or write capability was actually proved. A public page, an installed CLI, a secret name, or a working login to a different account is not enough.
+
+## Safe Proof Examples
+
+- list authenticated identities without tokens;
+- run a `whoami` or account command;
+- list project, cluster, repository, or secret names;
+- inspect file permissions and key names without values;
+- call a read-only health or identity endpoint;
+- confirm a browser session reaches the required signed-in surface.
+
+If a command reveals a secret by default, replace it with a metadata or presence check.
+
+## Failure Routing
+
+- CLI exists but authentication is missing: report the missing login or credential source.
+- Authentication works but the target fails: report the account, project, region, tenant, or permission mismatch.
+- Secret authority is healthy but runtime lacks the value: report a delivery problem, not a missing secret.
+- A public URL works but admin access is unknown: report `partial`.
+- A local handoff exists but freshness is unknown: report the staleness risk.
+
 ## Output Contract
 
 ```text
@@ -41,3 +62,9 @@ IDENTITY | account=<non-sensitive identity or unknown> | target=<resource>
 PROOF | command=<read-only check> | result=<short result>
 BLOCKER | none or exact missing piece
 ```
+
+## Stop Conditions
+
+Stop when the access question is answered with enough proof for the task.
+
+Stop immediately if the next step would print, decode, rotate, copy, create, or deploy a secret. Hand that work to a private access-repair or secret-management workflow with separate authority.

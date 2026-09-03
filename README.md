@@ -215,7 +215,7 @@ flowchart LR
     D -- Yes --> G["Ready for handoff or ship gate"]
 ```
 
-The public repo calls this lane `review-and-polish`.
+The public repo calls this final gate `polish`.
 
 Inside the real workflow, that usually means some combination of:
 
@@ -293,13 +293,18 @@ Blocked: none
 
 That message is useful because it says what passed, what remains, and whether I am needed.
 
+`whatsapp-me` is not a watcher. The agent that is running calls it immediately when a milestone, blocker, decision, or final result should reach me away from the computer. A watcher such as `babysit-prs` can hand an update to it, but WhatsApp delivery is a separate action with its own proof and reply routing.
+
 ## What Is in This Repo
 
 - [docs/tooling.md](docs/tooling.md) explains the CLI, MCP, API, browser, and scheduler ladder
 - [docs/loops.md](docs/loops.md) explains babysitters, recurring checks, and proof-based notifications
 - [docs/architecture.md](docs/architecture.md) shows the public-core versus private-adapter model
 - [docs/ecosystem.md](docs/ecosystem.md) lists custom, community, and native capabilities
-- [docs/skills.md](docs/skills.md) maps the public skill pack
+- [docs/playbooks.md](docs/playbooks.md) shows the feature, bug, proof, worktree, review, and loop flows
+- [docs/skill-patterns.md](docs/skill-patterns.md) explains the design rules behind the public skills
+- [docs/visuals.md](docs/visuals.md) records the public-safe visual system
+- [skills/README.md](skills/README.md) maps the public skill pack and install paths
 - [docs/publishing-policy.md](docs/publishing-policy.md) sets the safety boundary for public sharing
 - [skills/](skills/) contains the public-safe workflow skills
 
@@ -307,26 +312,7 @@ That message is useful because it says what passed, what remains, and whether I 
 
 The `skills/` directory is the executable part of this repo.
 
-It includes:
-
-- `start-work`
-- `prepare-context`
-- `shape-goal`
-- `deliver-feature`
-- `reproduce-bug`
-- `investigate-bug`
-- `fix-bug`
-- `worktree`
-- `dev-flow`
-- `hot-reload`
-- `browser-proof`
-- `review-and-polish`
-- `babysit-pr`
-- `access-check`
-- `watch-loop`
-- `progress-update`
-- `release-proof`
-- `cleanup`
+It has one front door, `workflow`, and concrete skills for context, Jira, docs, bug reproduction and fixing, worktrees, warm dev slots, hot reload, browser proof, polishing, pull requests, loops, PR babysitting, WhatsApp delivery, release proof, sync, reporting, access, and cleanup.
 
 These are not project adapters. They are reusable operating rules.
 

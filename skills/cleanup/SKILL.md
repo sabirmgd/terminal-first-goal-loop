@@ -41,6 +41,24 @@ Only `owned-and-clean` is eligible for automatic removal.
 5. Preserve evidence that is still useful for resume or audit.
 6. Report every leftover plainly.
 
+## Worktree And Branch Rules
+
+1. Never remove the main or canonical checkout.
+2. Never remove a dirty worktree without explicit authority and a recovery plan.
+3. Do not assume a branch is disposable because its remote disappeared.
+4. Recheck status, ownership, and open PR or MR state immediately before removal.
+5. Prune git metadata only after owned removals are complete.
+
+## Runtime And Browser Rules
+
+- Stop only task-owned slots, containers, native processes, watchers, and port forwards.
+- A slot stop must not stop shared warm infrastructure.
+- Close task-owned browser sessions and temporary auth state.
+- Remove test records through the product or API path first when normal cleanup hooks matter.
+- Keep screenshots, logs, and evidence that are still required for review, audit, or resume.
+
+If cleanup fails after the feature proof passes, the task is still `blocked` on cleanup. Do not hide residual resources behind a success message.
+
 ## Output Contract
 
 ```text
@@ -50,3 +68,7 @@ LEFTOVERS | <dirty, unknown, shared, or intentionally preserved items>
 PROOF | <git, process, browser, or data cleanup result>
 RESUME | <none or exact next step>
 ```
+
+## Stop Conditions
+
+Return `closed` only when every owned disposable item is removed or intentionally preserved with a reason. Return `paused` when the state is ready to resume. Return `blocked` when dirty, unknown, shared, or failed cleanup remains.

@@ -10,21 +10,11 @@ That separation keeps the public core clean.
 
 ## First-Party Skills
 
-These are the reusable workflow skills maintained in this repo:
+The reusable workflow skills maintained here use one front door, `workflow`, plus concrete capabilities for context, Jira, docs, bug work, worktrees, dev slots, hot reload, browser proof, polishing, pull requests, loops, OpenClaw and WhatsApp delivery, release proof, reporting, sync, access, and cleanup.
 
-- `start-work`
-- `prepare-context`
-- `shape-goal`
-- `deliver-feature`
-- `reproduce-bug`
-- `polish-change`
-- `access-check`
-- `watch-loop`
-- `progress-update`
-- `release-proof`
-- `close-work`
+See the complete [first-party skills catalog](../skills/README.md).
 
-See [skills/README.md](../skills/README.md) for the catalog.
+Figma, Gmail, Fireflies, and similar account-backed connectors are not copied as public skills. The public `context` skill can use them when they are configured, while the real account and permission details remain private.
 
 ## Community Tools and Skills
 
@@ -37,6 +27,7 @@ These are valuable, but they should stay upstream.
 | Taste | stronger visual direction for frontend work | [Leonxlnx/taste-skill](https://github.com/Leonxlnx/taste-skill) |
 | Impeccable | UI critique, polish, accessibility, stronger taste | [pbakaus/impeccable](https://github.com/pbakaus/impeccable) |
 | agent-browser | real browser journeys, screenshots, console and network proof | [vercel-labs/agent-browser](https://github.com/vercel-labs/agent-browser) |
+| oh-my-codex | Codex roles, teams, workflows, state, and orchestration | [Yeachan-Heo/oh-my-codex](https://github.com/Yeachan-Heo/oh-my-codex) |
 | Skills CLI | install one skill pack into several agent runtimes | [vercel-labs/skills](https://github.com/vercel-labs/skills) |
 | Agent Skills collection | reference implementations and reusable public skills | [vercel-labs/agent-skills](https://github.com/vercel-labs/agent-skills) |
 | OpenClaw | route milestone updates and replies through chat surfaces such as WhatsApp | [openclaw/openclaw](https://github.com/openclaw/openclaw) |
@@ -55,8 +46,8 @@ These are runtime features, not repo-owned copies:
 | subagents | separate maker, reviewer, and verifier contexts |
 | hooks | enforce local rules or emit lifecycle events |
 | plugins | install maintained skill bundles |
-| code review | run multi-agent review on code changes |
-| code-simplifier | simplify changed code without changing behavior |
+| [PR Review Toolkit](https://github.com/anthropics/claude-plugins-official/blob/main/plugins/pr-review-toolkit/README.md) | run specialized review passes over code, tests, types, comments, and silent failures |
+| [code-simplifier](https://github.com/anthropics/claude-plugins-official/blob/main/plugins/code-simplifier/agents/code-simplifier.md) | simplify changed code without changing behavior |
 
 ## Native Codex Capabilities
 

@@ -75,6 +75,11 @@ can it actually access?
 I use OpenClaw as the transport for milestone updates, babysitter reports,
 proof receipts, decision requests, and handoffs. That often lands on WhatsApp.
 
+`whatsapp-me` is not a loop. The currently running agent calls it immediately
+when an approved update should reach the configured WhatsApp target. A loop may
+produce the update, but the delivery skill has its own send receipt and reply
+routing back to the task, session, and worktree.
+
 The message should be short and proof-based:
 
 ```text

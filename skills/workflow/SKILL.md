@@ -62,6 +62,8 @@ Possible sources:
 
 Pull a source only when it changes the decision.
 
+Use `context` when the task needs several sources or when freshness, provenance, email, meeting, ticket, documentation, or design boundaries matter. Use `jira-manager` or `docs-manager` directly when only one concrete system is needed.
+
 ## Provenance and freshness rules
 
 For every important fact, keep three things visible:
@@ -146,7 +148,7 @@ Feature delivery:
 - pull design if it exists
 - define acceptance proof
 - isolate code changes
-- hand off to `deliver-feature`
+- hand off to `worktree`, then `dev-flow` or `hot-reload` when implementation begins
 
 Bug reproduction:
 
@@ -165,11 +167,11 @@ Bug fixing:
 
 Review and polish:
 
-- route here when implementation works and the job is now review, simplification, and signoff proof
+- hand off to `polish` when implementation works and the job is now review, simplification, and signoff proof
 
 Operations and release:
 
-- route here when the real question is deployed identity, rollout state, health, traffic, or exact runtime proof
+- use `release-proof` when the real question is deployed identity, rollout state, health, traffic, or exact runtime proof
 
 Integrations and tooling:
 
@@ -177,7 +179,7 @@ Integrations and tooling:
 
 Knowledge and communication:
 
-- route here when the task is to turn work into a ticket, document, handoff, saved decision, or progress update
+- use `jira-manager`, `docs-manager`, `status-report`, or `whatsapp-me` when the task is to turn work into a ticket, document, handoff, saved decision, or progress update
 
 Keep the source and authority visible. Do not make external writes implicitly.
 
