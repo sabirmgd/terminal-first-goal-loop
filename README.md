@@ -212,6 +212,8 @@ I rarely open Jira just to read or create a ticket, or Confluence just to draft 
 
 The sources are optional. A task may use Jira, Confluence, Figma, Gmail, Fireflies, cloud CLIs, or none of them. I pull only what the task needs.
 
+I often use [Wispr Flow](https://wisprflow.ai/) to speak the first rough version instead of typing it. That removes friction, but it does not remove the shaping step. The transcript is raw input. I still ask the agent to organize it, challenge unclear parts, and turn it into a goal that can be tested.
+
 Access is handled separately. An access-checking skill tells the agent whether a system is available, which account or project it is using, where the credential authority lives, and how to prove access without printing the secret.
 
 Email is read-only by default and limited by account, search, and date. Meeting transcripts are used only when policy and consent allow it. I keep the decisions and actions, not an endless raw transcript.
