@@ -383,7 +383,7 @@ I do not create a loop for every task. A loop is useful only when the check repe
 
 ## 13. Choose models by the job
 
-In my current setup, Codex usually handles implementation and orchestration. Claude Code often helps with design, plan review, or a second opinion. The important part is the separation of roles, not the product name.
+Today, I often use Codex for implementation and orchestration, and Claude Code for design, plan review, or a second opinion. Those assignments can change. Separating the builder from the reviewer is what matters.
 
 I route work like this:
 
@@ -505,17 +505,14 @@ A task is done when:
 
 Local tests, a pushed branch, a merged pull request, a successful build, and a green deployment are useful milestones. None of them alone proves the user's outcome.
 
-## What I would standardize next
+## My next changes
 
-The next improvement is not another tool. It is using the same small rules everywhere:
+The next improvement is not another tool. It is applying the same rules everywhere:
 
 1. Use the Focus Session note for every important task.
 2. Fix the cmux pane roles, tab names, and work-in-progress limits.
-3. Use the six task lanes and proof-based percentages.
-4. Give every loop saved state, a quiet path, an authority limit, and a stop rule.
-5. Keep one main copy of each workflow and use small adapters for different AI tools.
-6. Route work by role instead of hardcoding model versions unless a pin is truly needed.
-7. Keep secrets and identifying details out of skills, prompts, logs, screenshots, and examples.
+3. Use proof-based percentages and give every loop a clear stop rule.
+4. Keep one main copy of each workflow and use small adapters for different AI tools.
 
 ## Reference tools
 
