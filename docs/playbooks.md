@@ -1,27 +1,26 @@
 # Playbooks
 
-The main article explains the ideas. This file turns them into reusable flows.
+The article explains the ideas. This file turns them into repeatable flows.
 
 ## 1. Shape and launch a task
 
-Spend a short, focused session defining the task before asking an agent to run for hours.
+Spend a short focused session defining the task before asking an agent to run for hours.
 
 ```text
 Outcome: What changes for the user or operator?
-Context: Which code, tickets, designs, documents, or messages matter?
-Proof: What will fail before the work and pass afterward?
+Context: Which code, tickets, docs, emails, or designs matter?
+Proof: What should fail before the work and pass afterward?
 Decisions: Which choices still need a human?
-Stop: What must make the agent pause?
+Stop: What should make the agent pause?
 ```
 
 ```mermaid
 flowchart LR
     I["Raw idea"] --> C["Gather only relevant context"]
-    C --> O["Define outcome"]
-    O --> P["Define proof"]
-    P --> R["Review the plan if needed"]
-    R --> G["Launch long-running goal"]
-    G --> H["Return for decision or proof"]
+    C --> O["Define the outcome"]
+    O --> P["Define the proof"]
+    P --> G["Launch the goal"]
+    G --> H["Return only for proof or a decision"]
 ```
 
 ## 2. Feature delivery
@@ -29,40 +28,57 @@ flowchart LR
 ```mermaid
 flowchart TB
     U["Start with the user journey"] --> D{"Design exists?"}
-    D -- Yes --> F["Load Figma or design context"]
+    D -- Yes --> F["Load design context"]
     D -- No --> A["Create a disposable HTML artifact"]
-    F --> P["Plan architecture, data and failure states"]
+    F --> P["Plan architecture, data, permissions, and failure states"]
     A --> P
     P --> T["Write acceptance tests"]
-    T --> W["Create worktree and app slot"]
-    W --> B["Build with hot reload"]
-    B --> V["Integration and browser proof"]
-    V --> Q["Review, simplify and verify"]
-    Q --> PR["Prepare pull request and handoff"]
+    T --> W["Create worktree and slot"]
+    W --> B["Build the smallest useful slice"]
+    B --> V["Integration, API, and browser proof"]
+    V --> R["Review, simplify, and verify"]
+    R --> H["Prepare handoff or pull request"]
 ```
 
-The final proof depends on the surface. Backend behavior normally needs a real API or integration test. User-facing behavior needs the actual browser journey and screenshots.
+Notes:
 
-## 3. Bug fixing
+- Start from the user journey, not only the backend shape.
+- If the UI is unclear, create something disposable that lets you see it.
+- The proof should live in the repository when possible.
+
+## 3. Bug investigation
 
 ```mermaid
 flowchart TB
-    C["Bug report"] --> R["Reproduce the claim"]
+    C["Bug claim"] --> R["Reproduce the claim"]
     R --> X{"Reproduced?"}
-    X -- No --> S["Stop and report what was observed"]
-    X -- Yes --> O["Trace the root cause"]
-    O --> D["Explain choices and confirm intended behavior"]
-    D --> T["Write a failing test"]
-    T --> F["Fix the shared cause"]
-    F --> L["Run the same test locally or in a slot"]
-    L --> Q["Review, simplify and verify"]
-    Q --> P["Ship the exact tested version"]
-    P --> E["Run the same test in the affected environment"]
+    X -- No --> N["Report what happened and stop"]
+    X -- Yes --> T["Trace the root cause"]
+    T --> O["List fix options and risks"]
+    O --> D["Confirm intended behavior if needed"]
+    D --> B["Write the decision-ready brief"]
 ```
 
-Investigation can run without a human when it is read-only. Fixing pauses only when the expected behavior or risk choice is genuinely unclear.
+Investigation is a real lane. It is not just the first paragraph of a bug fix.
 
-## 4. Worktrees, warm infrastructure, and slots
+## 4. Bug fixing
+
+```mermaid
+flowchart TB
+    C["Approved bug or current repro bundle"] --> T["Write a failing durable test"]
+    T --> F["Fix the smallest shared cause"]
+    F --> L["Run the same test locally or in a slot"]
+    L --> R["Review and simplify"]
+    R --> P["Prove the final result"]
+```
+
+Notes:
+
+- Reproducing the bug is not enough. The fix needs a durable test.
+- The smallest fix should live at the shared cause when possible.
+- Local green is not shipped proof when the environment matters.
+
+## 5. Worktrees, warm infrastructure, and slots
 
 ```mermaid
 flowchart TB
@@ -72,38 +88,38 @@ flowchart TB
 
     I["Shared warm infrastructure"] --> IA["Database"]
     I --> IB["Cache and queues"]
-    I --> IC["Storage and supporting services"]
+    I --> IC["Storage and support services"]
 
-    WA --> SA["App slot A and fixed ports"]
-    WB --> SB["App slot B and fixed ports"]
-    WC --> SC["App slot C and fixed ports"]
-
-    IA --> SA
-    IA --> SB
-    IA --> SC
-    IB --> SA
-    IB --> SB
-    IB --> SC
+    WA --> SA["App slot A"]
+    WB --> SB["App slot B"]
+    WC --> SC["App slot C"]
 ```
 
-A slot should support five operations: start, list, smoke, stop, and release. Stopping an app slot must not stop shared infrastructure.
+The operating rules are simple:
 
-## 5. Cheapest-test loop
+- shared infrastructure stays warm
+- each mutable task gets its own slot
+- stopping a slot must not stop shared services
+- cleanup should release slot state, browser state, worktree state, and disposable test data
+
+## 6. Cheapest useful test ladder
 
 ```mermaid
 flowchart LR
-    E["Exact failure"] --> T0["Static or unit test"]
-    T0 --> T1["Component or integration test"]
-    T1 --> T2["Hot-reload request"]
-    T2 --> T3["Isolated slot or sandbox"]
-    T3 --> T4["Real browser or consumer"]
-    T4 --> T5["CI and deployed runtime"]
-    T5 --> J["Full journey"]
+    E["Exact failure"] --> T0["Static or focused test"]
+    T0 --> T1["Integration or API check"]
+    T1 --> T2["Hot-reload or slot request"]
+    T2 --> T3["Browser journey"]
+    T3 --> T4["Runtime or deployed proof"]
 ```
 
-Do not climb while the current level is red. When a higher level exposes a new error, return to the cheapest level that reproduces that error. Keep unrelated passing proof.
+Rules:
 
-## 6. Maker, reviewer, simplifier, verifier
+- do not jump to the most expensive proof first
+- do not rerun the full stack after every tiny edit
+- if a higher level fails, drop back to the cheapest level that reproduces that failure
+
+## 7. Maker, reviewer, simplifier, verifier
 
 ```mermaid
 sequenceDiagram
@@ -113,25 +129,38 @@ sequenceDiagram
     participant S as Simplifier
     participant V as Verifier
 
-    H->>M: Reviewed goal and boundaries
-    M->>M: Build and run focused tests
-    M->>R: Exact diff and tested version
+    H->>M: Tight goal and boundaries
+    M->>M: Build and run focused proof
+    M->>R: Exact diff and tested candidate
     R-->>M: Confirmed findings
-    M->>M: Fix the smallest coherent set
-    M->>S: Changed files only
-    S-->>V: Simplified exact version
-    V-->>H: Proof, remaining risk, and decision
+    M->>S: Fix and trim changed files
+    S-->>V: Final candidate
+    V-->>H: Proof, risk, and next action
 ```
 
-The reviewer may discover issues. A verifier can confirm or reject those issues against the code. Verification should not become a new, unbounded review.
-
-## 7. Running loops
-
-Every recurring loop is a sequence of small, fresh ticks.
+## 8. Context capture
 
 ```mermaid
 flowchart LR
-    S["Scheduler"] --> T["Fresh tick"]
+    S["Task"] --> J["Ticket or issue"]
+    S --> D["Docs or design"]
+    S --> E["Email or transcript"]
+    S --> C["Code and history"]
+    J --> P["One working brief"]
+    D --> P
+    E --> P
+    C --> P
+```
+
+Pull only what the task needs from systems like Jira, Confluence, Figma, Gmail, meeting transcripts, code, and git history.
+
+## 9. Loops
+
+Every loop should run in small fresh ticks.
+
+```mermaid
+flowchart LR
+    S["Scheduler or live loop"] --> T["Fresh tick"]
     T --> P["Read saved cursor"]
     P --> N["Read current state"]
     N --> D{"Changed?"}
@@ -142,38 +171,37 @@ flowchart LR
     C --> U["Notify if useful"]
 ```
 
-### Live local loop
-
-Use a live loop when the task needs local files, local CLIs, signed-in sessions, or the current checkout.
-
-```text
-/loop 30m /loop-tick <project> babysit
-```
-
-The laptop must stay awake, the network must remain available, and the Claude Code session must keep running.
-
-### Scheduled routine
-
-Use `/schedule` when a task should start at a known time or recur without manually opening the same prompt. Confirm what environment the routine runs in. A cloud routine does not automatically inherit access to local files, keychains, CLIs, browser sessions, or worktrees.
-
 ### Useful loop types
 
-| Loop | One tick | Stop condition |
+| Loop | One tick does | Typical stop condition |
 | --- | --- | --- |
-| Development | Run the smallest failing test and next safe fix | Candidate is ready or a decision is needed |
-| Review and fix | Review the latest diff and recheck confirmed findings | Clean, no progress, or round limit |
-| Pull request babysitter | Check new commits, comments, CI, and merge state | Closed, merged, or human decision |
-| CI and deployment watcher | Poll one run tied to one commit | Success, failure, cancellation, timeout, or new commit |
-| Dependency wait | Check one named outside condition | Condition changes or wait is cancelled |
-| Runtime monitor | Compare health with the last snapshot | Meaningful change or scheduled digest |
-| Knowledge capture | Turn one approved source into a short durable note | Note saved or external publication needs approval |
-| Cleanup | Recheck and remove safe disposable resources | Everything removed or ambiguous state found |
+| Pull request babysitter | Check new commits, comments, CI, review state, and mergeability | Closed, merged, or human decision |
+| CI or deploy watcher | Poll one run tied to one candidate | Success, failure, timeout, or new candidate |
+| Bug investigation loop | Keep narrowing a repro or root cause inside approved boundaries | Root-cause brief or human decision |
+| Context prefetch loop | Pull new ticket, doc, or transcript context for tomorrow's work | Brief captured or source unchanged |
+| Dependency wait | Check one named outside condition | Condition changed or wait cancelled |
+| Cleanup loop | Remove safe disposable resources | Everything cleaned or ambiguity found |
 
-Every loop needs saved state, idempotent actions, a quiet path, an authority limit, and a maximum retry or review count.
+### Local loops and scheduled loops
 
-## 8. Progress updates
+Local loops are useful when the work depends on local files, local CLIs, a signed-in browser session, or the current worktree. That is where leaving the laptop open and letting a live agent session keep running makes sense.
 
-Define milestones before starting. The percentage is the weight of completed milestones, not a guess based on time.
+Scheduled loops are useful when the task should start at a known time or recur predictably. A cloud schedule does not automatically inherit local files, keychains, CLI auth, or browser sessions.
+
+## 10. Proof-based progress
+
+The percentage should reflect completed milestones, not elapsed time.
+
+```mermaid
+flowchart LR
+    G["Goal milestones"] --> P["Completed verified milestones"]
+    P --> M["Progress message"]
+    M --> N["cmux notification"]
+    M --> O["OpenClaw"]
+    O --> W["WhatsApp update"]
+```
+
+Useful format:
 
 ```text
 65% complete
@@ -182,5 +210,3 @@ Proof: 18/18
 Next: browser journey
 Blocked: none
 ```
-
-Never report 100% while required runtime proof, cleanup, or a human decision remains open.
