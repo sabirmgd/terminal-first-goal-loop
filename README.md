@@ -1,536 +1,288 @@
-# The Terminal-First Goal Loop
+# How I Run Several AI Coding Projects Without Coding Round-Robin
 
-## A simple way to use AI across several software projects without losing focus
+My screen often has several projects open, each with its own tabs, terminals, agents, tests, and pull requests. That sounds like context-switching hell.
 
-I often work on several unrelated software projects at the same time. The hard part is not opening more terminals or running more AI agents. The hard part is knowing:
+It would be, if I tried to code in every pane.
 
-- what deserves my attention;
-- what an agent can do alone;
-- how each task will be tested;
-- when the work is truly done.
+I don't. I move round-robin only long enough to shape the next piece of work. I give a task five or ten focused minutes. I explain the outcome, load the right context, make the important decisions, and define how we will prove it works. Once the goal is tight, an agent can run for a long time without me. I move to the next task and repeat.
 
-My workflow is built around four ideas:
+Human attention moves. Agent work continues.
 
-1. Each project has its own workspace.
-2. Each task has a clear goal and a way to prove it works.
-3. I make the important product and risk decisions. Agents handle repeatable work.
-4. Work is done only when it passes the right test in the right environment.
+![Four tasks receive short human focus while their goals keep running](assets/round-robin-goals.jpg)
 
-The tools may change. The method should not.
+This article explains the system behind that approach: why I use cmux, how I turn rough ideas into long-running goals, how I isolate parallel work, why I keep Docker infrastructure warm, how I review the result with a second model, and how loops bring me back only when something needs attention.
 
-## 1. Start with a few simple rules
+## Shape briefly, then let the goal run
 
-### Start from the user's experience
+The round-robin part is not implementation. It is preparation.
 
-For a new product or a large new feature, I begin with the use cases and user journey. I do not start with the database.
-
-If a design already exists, I use it. If not, I may ask Claude or another model to create a simple HTML prototype. The prototype helps me see the flow before I invest in production code.
-
-For an existing product, I read the real code first. Tickets, documents, designs, emails, and meeting notes explain the intent. The code and the running product show the truth.
-
-### Decide how to test before building
-
-Before the agent writes code, I define:
-
-- what the user should be able to do;
-- what must not break;
-- the smallest test that can fail;
-- the final proof needed before I call the task done;
-- which decisions still need me.
-
-The implementation plan and the test plan are one plan.
-
-### Use the cheapest useful test
-
-I do not rebuild and redeploy the whole system after every edit. I start with the smallest test that can prove the current change. I use hot reload when possible. I run expensive end-to-end tests only after the smaller checks pass.
-
-### Separate the maker from the reviewer
-
-The agent that writes the code should not be the only agent that judges it. Important work gets an independent review of the exact version I plan to ship.
-
-### Prefer less code
-
-Before adding code, I ask:
-
-1. Does this need to exist?
-2. Does the codebase already solve it?
-3. Can the standard library or platform handle it?
-4. Does an installed dependency already cover it?
-
-I add a new abstraction or dependency only when the simpler options fail.
-
-### Keep important authority human
-
-Agents can inspect, plan, code, test, and prepare actions inside an agreed scope. Shared or risky actions need the authority defined for the task. Examples include publishing comments, creating tickets, merging, deploying, deleting, purchasing, or changing scope.
-
-## 2. Use cmux as a project cockpit
-
-I use [cmux](https://cmux.com/) to keep projects separate. Each project gets a named workspace in the sidebar. Each task gets a named tab inside that workspace.
-
-The workspace already tells me the project, so the tab name describes the task:
+For each task, I try to answer five questions:
 
 ```text
-<type>/<short-outcome> [state]
+What should change for the user?
+What context does the agent need?
+How will we prove it works?
+Which decisions still need me?
+When must the agent stop?
 ```
 
-Examples:
+That is the smallest useful version of what I call goal engineering. A simple task may need one paragraph. A large feature may need a reviewed plan, acceptance criteria, a test matrix, and clear checkpoints.
 
-```text
-feature/export-history [build]
-bug/session-loop [repro]
-review/pr-142 [verify]
-ops/release-candidate [ci]
+Once those answers are solid, I launch the goal. The agent may work for two or three hours. Many agents can run at the same time. What I avoid is personally bouncing between half-written implementations with no plan.
+
+```mermaid
+flowchart LR
+    H["Human focus<br/>5 to 10 minutes"] --> A["Shape Task A"]
+    H --> B["Shape Task B"]
+    H --> C["Shape Task C"]
+    A --> GA["Goal A keeps running"]
+    B --> GB["Goal B keeps running"]
+    C --> GC["Goal C keeps running"]
+    GA --> R["Return for a decision or proof"]
+    GB --> R
+    GC --> R
 ```
 
-I rename the tab when the state changes. A stale name creates false context.
+The task is also not the same as a ticket or a pull request. I may group several tickets when they share one user journey and one verification path. One ticket may need several pull requests when repositories, release order, or ownership boundaries differ.
 
-### My pane layout
+## Why I chose cmux
 
-I use two panes by default. I split into four only when I need to see context and proof at the same time.
+I did not choose [cmux](https://cmux.com/) because I wanted more terminals. I chose it because I needed a visible operating layer for many long-running sessions.
 
-When I use four panes:
+A workspace maps to a project. A tab maps to a task. Split panes let me keep the work, context, and proof visible together. The sidebar shows where I am, and the notification system tells me where I need to return.
 
-- **Bottom left: Focus.** The task I am actively driving.
-- **Top left: Goal.** The long-running agent, plan, or progress log.
-- **Bottom right: Proof.** Tests, reviews, browser checks, CI, or runtime logs.
-- **Top right: Context.** Figma, Jira, Confluence, designs, or dashboards.
+![An anonymous cmux project cockpit with workspaces, task tabs, focus, context and proof panes](assets/cmux-cockpit.jpg)
 
-Keeping the same layout across projects gives me muscle memory.
+On a large screen, I often use four panes:
 
-### Limit work in progress
+- The bottom-left pane gets my direct attention.
+- The top-left pane holds the long-running goal.
+- The bottom-right pane shows tests, review, CI, or browser proof.
+- The top-right pane holds designs, tickets, documentation, or another visual reference.
 
-A large screen can show many sessions, but my attention is still limited. My default limits are:
+This is a default, not a law. Some tasks need one pane. Some need two. The point is that each pane has a job, so I do not spend time working out what every terminal is doing.
 
-- one project gets my direct attention at a time;
-- one task is driven by me;
-- no more than two agents change code at the same time;
-- each project has at most three task tabs: `active`, `next`, and `parked`;
-- read-only watchers are allowed only when they stay silent if nothing changed.
+cmux notifications are the other half of the system. A long-running agent should not need me to stare at it. It should notify me when it has finished, failed, or reached a decision.
 
-Anything else goes into a backlog, not another pane.
+![A generic cmux notification panel showing a decision, a completed goal and a failed CI check](assets/cmux-notifications.jpg)
 
-I switch projects at a clear milestone: the plan is ready, the code is waiting for CI, the agent needs a decision, or a tested version is ready for review.
+The notifications turn several terminals into a queue I can understand. I can jump to the session that changed instead of scanning every screen. cmux also restores the layout and scrollback, which makes it easier to return after closing the app or restarting the machine. I still save the goal and proof to files because a terminal session is not a durable project record.
 
-## 3. Put every task into one of six lanes
+## Not every task is a feature or a bug
 
-I use six main task types:
+After looking across the workflows I use, I found eight useful categories:
 
-1. **Discovery and design:** a new product, major journey, or unclear problem.
-2. **Feature:** new behavior in an existing product.
-3. **Bug fix:** current behavior breaks an expected rule.
-4. **Review:** checking someone else's proposed change.
-5. **Operations and release:** infrastructure, migrations, deployment, recovery, or production checks.
-6. **Knowledge and communication:** tickets, documents, decisions, reports, and handoffs.
+| Lane | The first question |
+| --- | --- |
+| Discovery and design | What should the experience be? |
+| Feature delivery | What new outcome are we adding? |
+| Bug fixing | Can we reproduce the broken behavior? |
+| Refactoring and simplification | What can we remove without changing behavior? |
+| Review and verification | Does this exact change hold up? |
+| Operations and release | Is the tested version safely running? |
+| Integrations and automation | Can this repeated handoff become a reliable tool? |
+| Knowledge and communication | What needs to become a durable decision, ticket, or document? |
 
-I add a label such as `ui`, `backend`, `data`, `security`, `integration`, or `infrastructure` when it helps.
+UI, backend, data, security, and infrastructure are usually labels on one of these lanes. Investigation is a phase, not a separate destination.
 
-UI improvement is usually a feature or bug fix with a `ui` label. Investigation is a step that can happen in any lane.
+The lane matters because it changes the proof. A document does not need a deployment test. A production migration needs much more than a unit test.
 
-### A task is not the same as a pull request
+## Feature work and bug fixes need different loops
 
-I may group several tickets into one goal when they share the same user journey, code area, or test path. One ticket may need several pull requests when different repositories, owners, or release steps are involved.
+For a feature, I start from the user's journey. If Figma exists, I connect it. If it does not, I may use Claude Design or ask the model for a disposable HTML page so I can see the idea before we build it. I think through the architecture, database, empty states, permissions, and failure paths. Then I tighten the plan and let a second model review it if the change is complex.
 
-I split pull requests by what can be reviewed, deployed, rolled back, and tested safely. I do not split them by ticket count alone.
+For a bug, the first job is not fixing. It is proving the bug exists. The agent reproduces the report, traces the real cause, and explains the options. That is the decision gate. Sometimes QA found a misunderstanding, and sometimes there are several valid fixes with different product consequences.
 
-## 4. Bring context to the terminal
+```mermaid
+flowchart TB
+    subgraph Feature[Feature lane]
+        F1["User journey"] --> F2["Design and architecture"]
+        F2 --> F3["Acceptance criteria and tests"]
+        F3 --> F4["Build"]
+        F4 --> F5["Browser or API proof"]
+    end
 
-I try to work through machine-friendly tools instead of repeatedly opening web pages. This makes the work easier to repeat, automate, and verify.
-
-Common sources include:
-
-- Jira for requirements and ticket history;
-- Confluence for decisions and architecture;
-- Figma for intended screens and journeys;
-- source code and git history for real behavior;
-- Gmail for narrowly scoped business context;
-- Fireflies for approved meeting transcripts;
-- Cloudflare, `gcloud`, `doctl`, and other CLIs for runtime facts.
-
-I also use [Wispr Flow](https://wisprflow.ai/) to speak instead of typing. A voice dump is only raw material. The agent must still organize it, remove repetition, and point out missing or conflicting decisions.
-
-### Build a small context pack
-
-Before planning, I collect only what the task needs:
-
-```text
-problem
-affected user
-relevant tickets and decisions
-current behavior from code or runtime
-design references
-constraints and non-goals
-open decisions
+    subgraph Bug[Bug-fix lane]
+        B1["Reproduce"] --> B2["Find root cause"]
+        B2 --> B3["Confirm the intended behavior"]
+        B3 --> B4["Write a failing test"]
+        B4 --> B5["Fix once at the shared boundary"]
+        B5 --> B6["Run the same test on shipped code"]
+    end
 ```
 
-More context is not always better. A large dump can hide the important facts and increase cost.
+Tests should outlive the task. For backend work, that normally means real integration or API tests inside the repository's testing framework, not only one-off commands. For user-facing work, the agent uses [agent-browser](https://github.com/vercel-labs/agent-browser) to perform the journey and save screenshots.
 
-### Handle email and meeting transcripts carefully
+## Worktrees make parallel agents safe
 
-Email access should be read-only by default. I define the account, search or labels, time range, and what may be saved.
+Many agents can run at once. They should not all edit the same checkout.
 
-Meeting transcription depends on company policy, local law, and participant notice or consent. The raw transcript is source material, not the final document. I keep a short summary with the date, decisions, actions, and source. I do not publish raw transcripts by default.
+Each mutating task gets its own git worktree. That gives the task its own branch, folder, diff, and runtime slot. Agents can move independently without overwriting each other's files or constantly switching the main checkout.
 
-## 5. Give agents access without exposing secrets
+```mermaid
+flowchart TB
+    R["Repository"] --> W1["Worktree A<br/>Task A"]
+    R --> W2["Worktree B<br/>Task B"]
+    R --> W3["Worktree C<br/>Task C"]
+    I["Warm shared infrastructure<br/>database, cache, queues, storage"] --> S1["App slot A"]
+    I --> S2["App slot B"]
+    I --> S3["App slot C"]
+    W1 --> S1
+    W2 --> S2
+    W3 --> S3
+```
 
-Every organization should have one read-only access checker. It should report:
+Worktrees solve file isolation. Slots solve runtime isolation.
 
-- whether access is available, partial, or unavailable;
-- where the credential comes from, without showing its value;
-- which account, project, tenant, or cluster is active;
-- which CLI, MCP, or API to use;
-- a safe command that proves access;
-- the exact blocker when access fails.
+## Keep Docker warm and use hot reload
 
-Finding a credential and changing a credential are different tasks.
+I added slots after watching agents waste time rebuilding the same environment. A small fix could trigger a full Docker rebuild, a full startup, and a full end-to-end run. If that cycle takes ten minutes, the agent spends most of its time waiting and rediscovers one error per deployment.
 
-I never trust the shell's default cloud account, Kubernetes context, or project. Every command names the intended target. Skills point to the secret authority; they never contain the secret itself.
+The better setup keeps heavy shared services running once. Each worktree gets a lightweight application slot with predictable ports. The task I am actively shaping can use native hot reload. Background tasks can use isolated containers against the same warm infrastructure.
 
-## 6. Turn the task into a goal
+The same idea applies to testing. Start with the cheapest check that can prove the current claim.
 
-I call this step **goal engineering**. The goal is not to write a huge prompt. The goal is to make the result clear enough that an agent can work for hours without inventing scope or stopping too early.
+```mermaid
+flowchart LR
+    E["Exact error"] --> T["Smallest failing test"]
+    T --> X["Smallest fix"]
+    X --> H["Hot reload"]
+    H --> P{"Same test passes?"}
+    P -- No --> E
+    P -- Yes --> N["Next boundary"]
+    N --> J["Full journey once at the end"]
+```
 
-Every important task starts with a small Focus Session note:
+The ladder usually moves from static checks, to a unit test, to a component or integration test, to a local API request, to a slot or sandbox, and finally to the real browser journey. If a higher level fails, I return to the cheapest level that can reproduce that failure. I do not rerun every expensive test after every small edit.
+
+## The maker should not grade its own work
+
+I often use Codex to build and Claude Code to challenge the result. The exact products can change. The separation is what matters.
+
+My normal quality loop looks like this:
+
+```mermaid
+flowchart LR
+    P["Reviewed plan"] --> M["Maker builds"]
+    M --> T["Focused tests pass"]
+    T --> R["Independent code review"]
+    R --> F["Fix confirmed findings"]
+    F --> S["Simplify changed files"]
+    S --> V["Fresh verifier checks the exact version"]
+    V --> D{"Clean?"}
+    D -- No --> F
+    D -- Yes --> G["Ready to ship"]
+```
+
+In Claude Code, the [PR Review Toolkit](https://github.com/anthropics/claude-plugins-official/blob/main/plugins/pr-review-toolkit/README.md) provides focused reviewers for code, tests, types, comments, and silent failures. The [code-simplifier](https://github.com/anthropics/claude-plugins-official/blob/main/plugins/code-simplifier/agents/code-simplifier.md) removes unnecessary complexity without changing behavior.
+
+I use [Ponytail](https://github.com/DietrichGebert/ponytail) earlier, while the code is being written. Its job is to ask whether the code needs to exist, whether the codebase already solves the problem, and whether the standard library or an installed dependency is enough. It is much cheaper to avoid unnecessary code than to simplify it later.
+
+For visual work, [Taste](https://github.com/leonxlnx/taste-skill) and [Impeccable](https://github.com/pbakaus/impeccable) push the agent away from generic frontends. They still do not replace accessibility checks, browser testing, or product judgment.
+
+## Skills are the reusable part
+
+A good agent session can disappear. A good skill keeps the lesson.
+
+Across different codebases, my skill names vary, but the patterns repeat: shape a goal, check access, reproduce a bug, create a worktree, start an environment, test through the browser, review a diff, simplify the code, watch a deployment, send a handoff, and clean up.
+
+A useful skill is not a bag of prompts. It says when it should run, what it may touch, how it proves success, what needs a human, and when it must stop.
 
 ```markdown
-# Focus Session
+---
+name: bugfix
+description: Reproduce and fix a reported bug
+---
 
-Outcome:
-Task type and surface:
-User-visible acceptance criteria:
-Scope:
-Non-goals:
-Exact version being tested:
-Test ladder:
-Human decisions:
-Allowed external actions:
-Stop conditions:
-Next handoff:
+1. Reproduce the claim.
+2. Explain the root cause and choices.
+3. Write a failing test.
+4. Fix the shared cause.
+5. Run the same test locally and on shipped code.
+6. Stop before any action that needs human authority.
 ```
 
-A small task may fit in one paragraph. A risky or long-running task may need a full plan, a list of affected areas, and a table that maps each requirement to its proof.
+I have pulled the common patterns into [the skill patterns guide](docs/skill-patterns.md), with public-safe examples you can adapt.
 
-### A goal is ready when
+## Bring context to the terminal
 
-- “done” has an observable meaning;
-- the affected areas are listed;
-- every acceptance rule has a test;
-- tests are ordered from cheap to expensive;
-- outside dependencies and human decisions are named;
-- one main session owns the goal;
-- child agents have clear, limited work;
-- review and fix loops have a maximum number of rounds;
-- the tested version can be identified by commit, build, image, or file hash.
+I rarely open Jira just to read or create a ticket, or Confluence just to draft a page. Agents work better when the context is available through a CLI, MCP tool, or API. The operation becomes repeatable, searchable, and auditable.
 
-If the agent cannot name the smallest test that can fail, the goal is not ready to run alone.
+![A terminal connected to Jira, Confluence, Figma, Gmail, Fireflies and cloud tools through CLI, MCP and APIs](assets/terminal-context-hub.jpg)
 
-## 7. Feature development
+The sources are optional. A task may use Jira, Confluence, Figma, Gmail, Fireflies, cloud CLIs, or none of them. I pull only what the task needs.
 
-### Design and plan
+Access is handled separately. An access-checking skill tells the agent whether a system is available, which account or project it is using, where the credential authority lives, and how to prove access without printing the secret.
 
-1. Gather the relevant Jira, Confluence, Figma, email, and code context.
-2. Describe the user journey in plain language.
-3. Use the real design, or create a disposable HTML prototype.
-4. Review the happy path, errors, empty states, permissions, data ownership, and database impact.
-5. Explain the implementation idea to the agent.
-6. Let the agent inspect the code and challenge the idea.
-7. Write the acceptance rules and tests.
-8. Ask a second model to review a complex plan.
-9. Choose one useful, testable slice to build.
+Email is read-only by default and limited by account, search, and date. Meeting transcripts are used only when policy and consent allow it. I keep the decisions and actions, not an endless raw transcript.
 
-For frontend work, I use [Taste](https://github.com/leonxlnx/taste-skill) or [Impeccable](https://github.com/pbakaus/impeccable) to improve visual judgment, hierarchy, accessibility, responsiveness, and interaction quality. These skills improve the design. They do not replace requirements or browser testing.
+When a useful website has no usable CLI or public API, [Apiify](https://github.com/sabirmgd/apiify-skills) uses the browser once for discovery or login, then turns the workflow into the cheapest reliable script. The browser remains the right tool for user-facing proof. It is a poor runtime for repeated data work when a deterministic request is possible.
 
-### Build and test
+## Let loops watch the boring parts
 
-1. Create an isolated worktree and runtime slot.
-2. Confirm the current tests are green.
-3. Write focused unit tests for non-trivial logic.
-4. Write lasting integration or API tests for important contracts.
-5. Implement the smallest complete change.
-6. Use hot reload and the smallest failing test while coding.
-7. Run wider tests only after the smaller checks pass.
-8. If users see the change, run the real flow with [agent-browser](https://github.com/vercel-labs/agent-browser) and save screenshots.
+Some tasks should keep checking while I do something else: pull request comments, CI, deployments, runtime health, dependency waits, or cleanup.
 
-## 8. Bug fixing
+I run each loop as a small tick. One tick reads the current state, compares it with the last saved state, does only the allowed work, saves its new position, and stops. The next tick starts fresh. This keeps long-running loop sessions from filling up with old diffs and logs.
 
-Bug fixes follow a stricter order:
+```mermaid
+flowchart LR
+    S["Schedule or live loop"] --> T["Run one fresh tick"]
+    T --> C["Compare with saved state"]
+    C --> Q{"Anything changed?"}
+    Q -- No --> Z["Stay quiet"]
+    Q -- Yes --> A["Perform allowed action"]
+    A --> P["Save cursor and proof"]
+    P --> N["Notify or wait for next tick"]
+```
 
-1. **Reproduce the problem.** A bug report is a claim until I can see it.
-2. **Find the root cause.** Trace the real caller chain instead of patching the visible symptom.
-3. **Make the decision.** Show what is wrong, who it affects, the possible fixes, and the recommended fix. Sometimes the report is not a bug, or the correct behavior is unclear.
-4. **Write a failing test.** Prefer an integration, API, or browser test that represents the real report. See it fail before changing the code.
-5. **Fix the root cause.** Fix the shared boundary once instead of adding guards to every caller.
-6. **Run the same test.** See it pass locally or in the isolated slot.
-7. **Review and simplify.** Use the same final quality gate as feature work.
-8. **Ship the exact tested version.**
-9. **Run the same test in the affected environment.** A bug found in a demo or live system is not done until the test passes there on the shipped code.
-
-If I cannot reproduce the bug, I stop and say so. I do not create a fix for behavior I cannot see.
-
-## 9. Isolate work and keep infrastructure warm
-
-Each coding task gets its own git worktree. This gives each agent a separate branch, folder, and clean diff without constant branch switching.
-
-I do not start a full infrastructure stack for every worktree. I keep expensive shared services running once. Each worktree gets a numbered application slot with predictable ports and isolated app processes.
-
-I use two slot types:
-
-- **Hot slot:** attached development processes for the task I am editing.
-- **Passive slot:** background services for another agent or comparison test.
-
-Every slot needs simple commands to start, list, test, stop, and release it. Stopping a slot must not stop the shared infrastructure. Cleanup is part of finishing the task.
-
-## 10. Climb the test ladder
-
-I use the lowest level that can prove the current claim:
-
-1. formatting, lint, types, and static checks;
-2. unit test;
-3. component or service test;
-4. integration or real API test;
-5. local request with hot reload;
-6. isolated slot or sandbox;
-7. real browser or user flow;
-8. CI on the exact commit;
-9. deployed runtime tied to that commit or image;
-10. final end-to-end test in the target environment.
-
-A passing level allows the agent to move up. A failure sends it back to the cheapest level that can reproduce that failure. It does not force unrelated tests to run again.
-
-For UI work, a screenshot needs context: the action, screen size, tested version, and expected result. An API response does not prove the UI works. A successful deployment does not prove the user journey works.
-
-## 11. Review, simplify, and verify
-
-My final quality gate is:
+For a live local loop, I leave the laptop awake and keep the Claude Code session running. A typical command looks like:
 
 ```text
-tests green
--> simplify only the changed files
--> run the affected tests again
--> independent review of the exact version
--> fix confirmed problems in a small, coherent batch
--> run affected tests
--> fresh final review or verifier
--> commit or push only when clean
+/loop 30m /loop-tick <project> babysit
 ```
 
-In Claude Code, I use Anthropic's [PR Review Toolkit](https://github.com/anthropics/claude-plugins-official/blob/main/plugins/pr-review-toolkit/README.md) for focused reviews of code, tests, types, comments, and silent failures. I use Anthropic's [code-simplifier](https://github.com/anthropics/claude-plugins-official/blob/main/plugins/code-simplifier/agents/code-simplifier.md) for behavior-preserving cleanup.
+I use `/schedule` for work that should start at a known time or recur as a routine. A local loop can reach local files, CLIs, and authenticated sessions because it runs on my machine. A cloud-scheduled task can only reach what its cloud environment and connected tools expose. I do not assume the two have the same access.
 
-I also use [Superpowers](https://github.com/obra/superpowers) for structured planning and development, and [Ponytail](https://github.com/DietrichGebert/ponytail) to push the implementation toward the smallest correct solution.
+The useful loop types are described in [the playbooks](docs/playbooks.md): development, review and fix, pull request babysitting, CI and deployment watching, dependency waiting, runtime monitoring, knowledge capture, and cleanup.
 
-The reviewer finds possible problems. A separate verifier may confirm or reject those findings, but it must not invent new findings during that check.
+Every loop needs saved state, idempotent actions, a quiet path, an authority boundary, and a stop rule. Without those, it is not automation. It is an agent repeatedly making guesses.
 
-The amount of review depends on risk:
+## Progress should be tied to proof
 
-- a tiny, reversible change may need only its focused test;
-- normal feature work gets one independent review;
-- security, permissions, payments, migrations, destructive work, and production releases need stronger review from fresh context.
+I do not want “still working” messages. I want to know what passed, what is next, and whether anything needs me.
 
-## 12. Let agents run useful loops
+![A long-running laptop loop sending a proof-based milestone update to a phone](assets/milestone-update.jpg)
 
-AI should keep going when the next action is safe, expected, and inside scope. But every loop needs rules.
-
-Each loop defines:
+A useful update looks like this:
 
 ```text
-when it starts
-what one pass does
-what state it saves
-how it avoids doing the same action twice
-what it may change
-what needs a human
-what it says when nothing changed
-when it stops
-maximum retries
+65% complete
+Done: integration tests pass
+Proof: 18/18
+Next: browser journey
+Blocked: none
 ```
 
-### The loops I find useful
+The percentage comes from planned milestones, not elapsed time. For a feature, the milestones may be context, plan, implementation, focused tests, integration proof, review, CI, deployment, and final user journey. A task without deployment removes those steps.
 
-**Development loop**
+I send important milestones to WhatsApp through a local automation bridge. The loop sends decisions and proof, not raw terminal noise.
 
-```text
-exact failure -> smallest test -> minimal fix -> hot reload -> same test passes -> next boundary
-```
+## What “done” means
 
-**Review and fix loop**
+Local green is useful. A pushed branch is useful. A merged pull request and a successful deployment are useful. None of them alone proves the user's outcome.
 
-Review the exact version, group duplicate findings, fix the smallest coherent set, and rerun only the affected tests. Stop when clean, when no progress is made, or when the round limit is reached.
+I call the task done when the intended user or operator can achieve the result, the required tests pass, the exact reviewed version is the version being tested, user-facing work has browser proof, confirmed review findings are closed, and temporary worktrees, slots, sessions, and test data are cleaned up.
 
-**Pull request babysitter**
+That is the whole system:
 
-Check only what changed since the last pass. Watch comments and CI. Verify replies against code, not against what the author says. Stay silent when nothing changed. Stop when the pull request closes, merges, or needs a real human decision.
+> Shape the task, define the proof, isolate the work, keep the feedback loop cheap, let the goal run, and return only for a decision or verified result.
 
-**CI and deployment watcher**
+## Go deeper
 
-Watch one job tied to one exact version. Stop on success, failure, cancellation, timeout, or a new version. Report the failed job and useful error, not every poll.
+- [Detailed playbooks and Mermaid flows](docs/playbooks.md)
+- [Reusable skill patterns and samples](docs/skill-patterns.md)
+- [Visual briefs and Gemini generation notes](docs/visuals.md)
 
-**Dependency wait loop**
+## Tools mentioned
 
-Check one outside condition per pass. Do not re-plan the task while nothing changed. Resume from the saved step when it changes.
-
-**Runtime monitor**
-
-Batch health checks and compare them with the previous result. Notify only when something meaningful changes or when a scheduled report is due.
-
-**Knowledge loop**
-
-After an important meeting, decision, or incident, write a short note with the date, source, decision, and actions. Publishing the note still follows the external-action rule.
-
-**Cleanup loop**
-
-After a merge or cancelled task, find unused worktrees, branches, slots, browser sessions, port forwards, and test data. Recheck each target before cleanup. Never remove dirty or unclear state.
-
-I do not create a loop for every task. A loop is useful only when the check repeats, changes are cheap to detect, actions can be repeated safely, and the stop condition is clear.
-
-## 13. Choose models by the job
-
-Today, I often use Codex for implementation and orchestration, and Claude Code for design, plan review, or a second opinion. Those assignments can change. Separating the builder from the reviewer is what matters.
-
-I route work like this:
-
-- **Fast, cheaper model:** file search, summaries, status checks, ticket drafts, and simple transformations.
-- **Strong builder:** multi-file coding and long feature work.
-- **Deep reasoner:** architecture, unclear bugs, security, permissions, money, migrations, and difficult plans.
-- **Independent model:** plan review and final verification when a different perspective matters.
-- **Design model or skill:** user experience, visual direction, copy, and interaction polish.
-
-I reserve fast modes for work where latency matters. A long task can run at normal speed and report only at useful milestones.
-
-I parallelize independent reading and analysis. I normally serialize code changes. Two agents change code at once only when they own separate areas and combining the work will be easy.
-
-## 14. Report progress with proof
-
-Percentages should come from finished steps, not time spent or intuition.
-
-I set the steps before the task starts. A useful default is:
-
-| Progress | Finished step |
-| ---: | --- |
-| 0% | Task captured but not scoped |
-| 10% | Context and scope clear |
-| 20% | Acceptance rules and test ladder written |
-| 30% | Plan reviewed; worktree and environment ready |
-| 50% | Main implementation complete |
-| 65% | Focused tests and static checks pass |
-| 75% | Integration, slot, sandbox, or browser proof passes |
-| 85% | Simplification and independent review complete |
-| 90% | Pull request and required CI pass |
-| 95% | Exact version deployed to the target environment |
-| 100% | Final proof, cleanup, and handoff complete |
-
-For a bug fix, reproduction and a failing test must happen before implementation. If a task has no deployment, I remove those steps and recalculate the percentages.
-
-Each update is short:
-
-```text
-<percent> | done: <step> | proof: <result> | next: <step> | blocked: <none or exact reason>
-```
-
-For long tasks, I send these updates through a channel such as WhatsApp using a local automation bridge. I send milestones and decisions, not raw terminal logs.
-
-I never report 100% while a required test, cleanup step, or human decision is still open.
-
-## 15. Keep useful memory, not entire conversations
-
-I use four layers of memory:
-
-1. **Raw input:** voice dumps, emails, transcripts, screenshots, and logs. Keep them private and delete them when the task or policy says to.
-2. **Task memory:** goal, plan, decisions, current version, test results, blockers, and next step.
-3. **Repository memory:** local rules, architecture, commands, and common mistakes stored close to the code.
-4. **Long-term memory:** short lessons that can help future tasks, with the source and date last checked.
-
-I save decisions and reusable proof, not whole chats. I never save secrets as memory. I mark guesses as guesses and recheck facts that may have changed.
-
-When a task moves to another session or agent, the handoff includes:
-
-```text
-goal
-exact version
-proof already completed
-open findings
-current wait state
-next smallest action
-actions that are not allowed
-```
-
-The goal should survive a new session. The full conversation should not be needed to rebuild it.
-
-## 16. Prefer CLI, MCP, and APIs over repeated UI work
-
-Machine interfaces reduce friction. Agents can repeat commands, inspect errors, combine tools, and leave an audit trail.
-
-For normal execution, I prefer:
-
-1. an official CLI or API;
-2. a scoped MCP tool when it gives a safer, clearer operation;
-3. a small script around an authorized API;
-4. browser-assisted login or request replay;
-5. browser page automation;
-6. manual UI only when no reliable machine path exists.
-
-The browser has one exception: for a user-facing feature, the browser is the main proof that the experience works.
-
-Cloud commands always name the intended account, project, region, tenant, or cluster. I check access and use dry runs before making changes. Commands must not print credentials.
-
-I read and draft Jira tickets or Confluence pages through a CLI or MCP tool. The agent shows me the proposed external write, then performs it only when the task allows it. I use the web UI for visual checking, not as the default work surface.
-
-### Use APIify to remove repeated browser work
-
-[Apiify](https://github.com/sabirmgd/apiify-skills) turns an authorized browser workflow into a reusable script. The browser is used once for discovery or login. The final tool uses the cheapest reliable option:
-
-```text
-public API
--> private XHR or GraphQL request
--> authenticated browser request
--> page automation as a last resort
-```
-
-The result should be a readable script with clear inputs, structured output, safe authentication, a real test, and known risks.
-
-API discovery must never be used to bypass access controls, paywalls, CAPTCHAs, company policy, or site rules.
-
-## 17. Know what “done” means
-
-A task is done when:
-
-- the user or operator can achieve the intended outcome;
-- every acceptance rule has current proof;
-- focused and integration tests pass;
-- user-facing behavior has browser or real-user proof;
-- CI and the running system are tied to the exact tested version when needed;
-- confirmed review findings are fixed;
-- simplification did not change behavior;
-- external actions were authorized;
-- test data, sessions, slots, and worktrees are cleaned up;
-- the handoff names any remaining risk honestly.
-
-Local tests, a pushed branch, a merged pull request, a successful build, and a green deployment are useful milestones. None of them alone proves the user's outcome.
-
-## My next changes
-
-The next improvement is not another tool. It is applying the same rules everywhere:
-
-1. Use the Focus Session note for every important task.
-2. Fix the cmux pane roles, tab names, and work-in-progress limits.
-3. Use proof-based percentages and give every loop a clear stop rule.
-4. Keep one main copy of each workflow and use small adapters for different AI tools.
-
-## Reference tools
-
-- [cmux](https://cmux.com/) and its [source repository](https://github.com/manaflow-ai/cmux)
-- [Codex](https://developers.openai.com/codex/)
-- [Claude Code](https://docs.anthropic.com/en/docs/claude-code/overview)
-- [Wispr Flow](https://wisprflow.ai/)
-- [Fireflies security and privacy](https://fireflies.ai/security)
-- [Fireflies consent and notification controls](https://guide.fireflies.ai/articles/3917896272-how-consent-notifications-work-on-the-fireflies-desktop-app)
-- [agent-browser](https://github.com/vercel-labs/agent-browser)
-- [Superpowers](https://github.com/obra/superpowers)
-- [Ponytail](https://github.com/DietrichGebert/ponytail)
-- [Anthropic PR Review Toolkit](https://github.com/anthropics/claude-plugins-official/blob/main/plugins/pr-review-toolkit/README.md)
-- [Anthropic code-simplifier](https://github.com/anthropics/claude-plugins-official/blob/main/plugins/code-simplifier/agents/code-simplifier.md)
-- [Taste](https://github.com/leonxlnx/taste-skill)
-- [Impeccable](https://github.com/pbakaus/impeccable)
-- [Apiify](https://github.com/sabirmgd/apiify-skills)
-
-## The method in one sentence
-
-> Capture the idea, gather the right context, define the goal and tests, isolate the work, use the cheapest useful feedback loop, verify from the user's side, review with a fresh mind, and let safe loops handle the repeatable work.
+[cmux](https://cmux.com/) · [Codex](https://developers.openai.com/codex/) · [Claude Code](https://docs.anthropic.com/en/docs/claude-code/overview) · [Wispr Flow](https://wisprflow.ai/) · [Fireflies](https://fireflies.ai/security) · [agent-browser](https://github.com/vercel-labs/agent-browser) · [Superpowers](https://github.com/obra/superpowers) · [Ponytail](https://github.com/DietrichGebert/ponytail) · [PR Review Toolkit](https://github.com/anthropics/claude-plugins-official/blob/main/plugins/pr-review-toolkit/README.md) · [code-simplifier](https://github.com/anthropics/claude-plugins-official/blob/main/plugins/code-simplifier/agents/code-simplifier.md) · [Taste](https://github.com/leonxlnx/taste-skill) · [Impeccable](https://github.com/pbakaus/impeccable) · [Apiify](https://github.com/sabirmgd/apiify-skills)
